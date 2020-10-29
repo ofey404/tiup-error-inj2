@@ -26,6 +26,9 @@ type Config struct {
 	BinPath    string
 	Num        int
 	Host       string
+
+	// If true, this instance would be configured for error injection.
+	ErrInj bool
 }
 
 type instance struct {

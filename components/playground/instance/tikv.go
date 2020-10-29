@@ -31,21 +31,26 @@ type TiKVInstance struct {
 	instance
 	pds []*PDInstance
 	Process
+
+	AdvertisePort int
 }
 
 // NewTiKVInstance return a TiKVInstance
 func NewTiKVInstance(binPath string, dir, host, configPath string, id int, pds []*PDInstance) *TiKVInstance {
+	port := utils.MustGetFreePort(host, 20160)
 	return &TiKVInstance{
 		instance: instance{
 			BinPath:    binPath,
 			ID:         id,
 			Dir:        dir,
 			Host:       host,
-			Port:       utils.MustGetFreePort(host, 20160),
+			Port:       port,
 			StatusPort: utils.MustGetFreePort(host, 20180),
 			ConfigPath: configPath,
 		},
 		pds: pds,
+
+		AdvertisePort: port,
 	}
 }
 
@@ -68,7 +73,7 @@ func (inst *TiKVInstance) Start(ctx context.Context, version v0manifest.Version)
 	}
 	args := []string{
 		fmt.Sprintf("--addr=%s:%d", inst.Host, inst.Port),
-		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.Port),
+		fmt.Sprintf("--advertise-addr=%s:%d", advertiseHost(inst.Host), inst.AdvertisePort),
 		fmt.Sprintf("--status-addr=%s:%d", inst.Host, inst.StatusPort),
 		fmt.Sprintf("--pd=%s", strings.Join(endpoints, ",")),
 		fmt.Sprintf("--config=%s", inst.ConfigPath),
@@ -97,7 +102,7 @@ func (inst *TiKVInstance) LogFile() string {
 
 // StoreAddr return the store address of TiKV
 func (inst *TiKVInstance) StoreAddr() string {
-	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.Port)
+	return fmt.Sprintf("%s:%d", advertiseHost(inst.Host), inst.AdvertisePort)
 }
 
 func (inst *TiKVInstance) checkConfig() error {

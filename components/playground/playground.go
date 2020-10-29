@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,7 @@ import (
 	"github.com/pingcap/tiup/pkg/environment"
 	"github.com/pingcap/tiup/pkg/repository/v0manifest"
 	"github.com/pingcap/tiup/pkg/utils"
+	"go.etcd.io/etcd/pkg/proxy"
 	"golang.org/x/mod/semver"
 	"golang.org/x/sync/errgroup"
 )
@@ -64,6 +66,8 @@ type Playground struct {
 	pumps            []*instance.Pump
 	drainers         []*instance.Drainer
 	startedInstances []instance.Instance
+
+	proxys []proxy.Server // only when --error-injection flag is set
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
@@ -717,6 +721,13 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 		}
 	}
 
+	// Assign one advertise port different from original port for each tikv.
+	if options.err_inj {
+		for _, t := range p.tikvs {
+			t.AdvertisePort = utils.MustGetFreePort(t.Host, 20160)
+		}
+	}
+
 	fmt.Println("Playground Bootstrapping...")
 
 	var monitorInfo *MonitorInfo
@@ -752,6 +763,24 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			}
 			return err
 		})
+	}
+
+	// Boot proxy for each tikv.
+	if options.err_inj {
+		for _, t := range p.tikvs {
+			srcAddr := fmt.Sprintf("%s:%d", t.Host, t.AdvertisePort)
+			dstAddr := fmt.Sprintf("%s:%d", t.Host, t.Port)
+
+			fmt.Println(srcAddr)
+			fmt.Println(dstAddr)
+
+			cfg := proxy.ServerConfig{
+				// Logger: zap.NewExample(),
+				From: url.URL{Scheme: "tcp", Host: srcAddr},
+				To:   url.URL{Scheme: "tcp", Host: dstAddr},
+			}
+			p.proxys = append(p.proxys, proxy.NewServer(cfg))
+		}
 	}
 
 	anyPumpReady := false

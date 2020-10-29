@@ -56,6 +56,7 @@ type bootOptions struct {
 	drainer instance.Config
 	host    string
 	monitor bool
+	err_inj bool
 }
 
 func installIfMissing(profile *localdata.Profile, component, version string) error {
@@ -93,6 +94,7 @@ func execute() error {
 		host:    "127.0.0.1",
 		monitor: true,
 		version: "",
+		err_inj: false,
 	}
 
 	rootCmd := &cobra.Command{
@@ -114,6 +116,12 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				opt.version = args[0]
+			}
+
+			//??
+			if opt.err_inj {
+				fmt.Printf("err_inj = %t\n", opt.err_inj)
+				opt.tikv.ErrInj = true
 			}
 
 			dataDir := os.Getenv(localdata.EnvNameInstanceDataDir)
@@ -207,6 +215,7 @@ Examples:
 	rootCmd.Flags().StringVarP(&opt.tidb.Host, "db.host", "", opt.tidb.Host, "Playground TiDB host. If not provided, TiDB will still use `host` flag as its host")
 	rootCmd.Flags().StringVarP(&opt.pd.Host, "pd.host", "", opt.pd.Host, "Playground PD host. If not provided, PD will still use `host` flag as its host")
 	rootCmd.Flags().BoolVar(&opt.monitor, "monitor", opt.monitor, "Start prometheus and grafana component")
+	rootCmd.Flags().BoolVar(&opt.err_inj, "error-injection", opt.err_inj, "Start playground with error injection")
 
 	rootCmd.Flags().StringVarP(&opt.tidb.ConfigPath, "db.config", "", opt.tidb.ConfigPath, "TiDB instance configuration file")
 	rootCmd.Flags().StringVarP(&opt.tikv.ConfigPath, "kv.config", "", opt.tikv.ConfigPath, "TiKV instance configuration file")
