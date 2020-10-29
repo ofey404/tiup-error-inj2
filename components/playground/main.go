@@ -118,9 +118,7 @@ Examples:
 				opt.version = args[0]
 			}
 
-			//??
 			if opt.err_inj {
-				fmt.Printf("err_inj = %t\n", opt.err_inj)
 				opt.tikv.ErrInj = true
 			}
 

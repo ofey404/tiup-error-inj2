@@ -128,6 +128,11 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 
 func (p *Playground) handlePartition(r io.Writer) (err error) {
 	fmt.Println("partition is called!")
+	for _, pp := range p.proxys {
+		pp.BlackholeTx()
+		pp.BlackholeRx()
+		fmt.Printf("Proxy From%s, To%s is cut!", pp.From(), pp.To())
+	}
 	return nil
 }
 
