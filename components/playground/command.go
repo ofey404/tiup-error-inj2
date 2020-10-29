@@ -32,9 +32,10 @@ type CommandType string
 
 // types of CommandType
 const (
-	ScaleInCommandType  CommandType = "scale-in"
-	ScaleOutCommandType CommandType = "scale-out"
-	DisplayCommandType  CommandType = "display"
+	ScaleInCommandType   CommandType = "scale-in"
+	ScaleOutCommandType  CommandType = "scale-out"
+	DisplayCommandType   CommandType = "display"
+	PartitionCommandType CommandType = "partition"
 )
 
 // Command send to Playground.
@@ -154,6 +155,17 @@ func newDisplay() *cobra.Command {
 	return cmd
 }
 
+// Partition for all nodes, for testing
+func newPartition() *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "partition certain node.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return partition(args)
+		},
+	}
+	return cmd
+}
+
 func scaleIn(pids []int) error {
 	port, err := targetTag()
 	if err != nil {
@@ -195,6 +207,19 @@ func display(args []string) error {
 	}
 	c := Command{
 		CommandType: DisplayCommandType,
+	}
+
+	addr := "127.0.0.1:" + strconv.Itoa(port)
+	return sendCommandsAndPrintResult([]Command{c}, addr)
+}
+
+func partition(args []string) error {
+	port, err := targetTag()
+	if err != nil {
+		return errors.AddStack(err)
+	}
+	c := Command{
+		CommandType: PartitionCommandType,
 	}
 
 	addr := "127.0.0.1:" + strconv.Itoa(port)

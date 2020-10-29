@@ -235,6 +235,7 @@ Examples:
 	rootCmd.AddCommand(newDisplay())
 	rootCmd.AddCommand(newScaleOut())
 	rootCmd.AddCommand(newScaleIn())
+	rootCmd.AddCommand(newPartition())
 
 	return rootCmd.Execute()
 }

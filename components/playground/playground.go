@@ -126,6 +126,11 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
+func (p *Playground) handlePartition(r io.Writer) (err error) {
+	fmt.Println("partition is called!")
+	return nil
+}
+
 var timeoutOpt = &utils.RetryOption{
 	Timeout: time.Second * 15,
 	Delay:   time.Second * 5,
@@ -474,6 +479,8 @@ func (p *Playground) handleCommand(cmd *Command, w io.Writer) error {
 		return p.handleScaleIn(w, cmd.PID)
 	case ScaleOutCommandType:
 		return p.handleScaleOut(w, cmd)
+	case PartitionCommandType:
+		return p.handlePartition(w)
 	}
 
 	return nil
