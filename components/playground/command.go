@@ -157,12 +157,21 @@ func newDisplay() *cobra.Command {
 
 // Partition for all nodes, for testing
 func newPartition() *cobra.Command {
+	var pids []int
+
 	cmd := &cobra.Command{
-		Use: "partition certain node.",
+		Use: "partition certain tikv instance with specified pid.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return partition(args)
+			if len(pids) == 0 {
+				return cmd.Help()
+			}
+
+			return partition(pids)
 		},
 	}
+
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, "pid of instance to make --advertise-addr unavailable")
+
 	return cmd
 }
 
@@ -213,17 +222,23 @@ func display(args []string) error {
 	return sendCommandsAndPrintResult([]Command{c}, addr)
 }
 
-func partition(args []string) error {
+func partition(pids []int) error {
 	port, err := targetTag()
 	if err != nil {
 		return errors.AddStack(err)
 	}
-	c := Command{
-		CommandType: PartitionCommandType,
+
+	var cmds []Command
+	for _, pid := range pids {
+		c := Command{
+			CommandType: PartitionCommandType,
+			PID:         pid,
+		}
+		cmds = append(cmds, c)
 	}
 
 	addr := "127.0.0.1:" + strconv.Itoa(port)
-	return sendCommandsAndPrintResult([]Command{c}, addr)
+	return sendCommandsAndPrintResult(cmds, addr)
 }
 
 func sendCommandsAndPrintResult(cmds []Command, addr string) error {

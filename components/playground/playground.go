@@ -126,13 +126,35 @@ func (p *Playground) handleDisplay(r io.Writer) (err error) {
 	return nil
 }
 
-func (p *Playground) handlePartition(r io.Writer) (err error) {
+func (p *Playground) handlePartition(w io.Writer, pid int) (err error) {
 	fmt.Println("partition is called!")
-	for _, pp := range p.proxys {
-		pp.BlackholeTx()
-		pp.BlackholeRx()
-		fmt.Printf("Proxy From%s, To%s is cut!", pp.From(), pp.To())
+
+	var kvWithPid *instance.TiKVInstance
+	for _, kv := range p.tikvs {
+		if kv.Pid() == pid {
+			kvWithPid = kv
+			break
+		}
 	}
+
+	if kvWithPid == nil {
+		fmt.Fprintf(w, "no tikv instance with id: %d\n", pid)
+		return nil
+	}
+
+	fromStr := fmt.Sprintf("tcp://%s:%d", kvWithPid.Host, kvWithPid.AdvertisePort)
+	for _, pp := range p.proxys {
+		fmt.Println(pp.From())
+		fmt.Println(fromStr)
+
+		if pp.From() == fromStr {
+			pp.BlackholeTx()
+			pp.BlackholeRx()
+			fmt.Printf("Proxy From%s, To%s is cut!", pp.From(), pp.To())
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -485,7 +507,7 @@ func (p *Playground) handleCommand(cmd *Command, w io.Writer) error {
 	case ScaleOutCommandType:
 		return p.handleScaleOut(w, cmd)
 	case PartitionCommandType:
-		return p.handlePartition(w)
+		return p.handlePartition(w, cmd.PID)
 	}
 
 	return nil
