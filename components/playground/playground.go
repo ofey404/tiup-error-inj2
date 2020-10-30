@@ -68,6 +68,8 @@ type Playground struct {
 	startedInstances []instance.Instance
 
 	proxys []proxy.Server // only when --error-injection flag is set
+	// FIXME: Some code use `p.ctx` while others not.
+	ctx context.Context // save context for restart nodes.
 
 	idAlloc        map[string]int
 	instanceWaiter errgroup.Group
@@ -160,6 +162,38 @@ func (p *Playground) handlePartition(w io.Writer, pid int) (err error) {
 
 func (p *Playground) handleRestart(w io.Writer, pid int) (err error) {
 	fmt.Printf("restart is called with pid %d!\n", pid)
+	// TODO: refer to scaleIn and start instance.
+
+	var kv *instance.TiKVInstance
+	for _, inst := range p.tikvs {
+		if inst.Pid() == pid {
+			kv = inst
+			break
+		}
+	}
+
+	if kv == nil {
+		fmt.Fprintf(w, "no tikv instance with id: %d\n", pid)
+		return nil
+	}
+
+	// Stop old instance:
+	// refer to handleScaleIn and killKVIfTombstone
+	// No need to do p.pdClient().DelStore()
+	fmt.Printf("stop tikv %s\n", kv.Addr())
+	err = syscall.Kill(kv.Pid(), syscall.SIGQUIT)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Restart instance:
+	ctx := p.ctx
+	err = p.startInstance(ctx, kv)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("tikv %s restarted with pid %d\n", kv.Addr(), kv.Pid())
+
 	return nil
 }
 
@@ -739,6 +773,9 @@ func (p *Playground) bootCluster(ctx context.Context, env *environment.Environme
 			options.tiflash.Num = 0
 		}
 	}
+
+	// FIXME: Some code use `p.ctx` while others not.
+	p.ctx = ctx // Save ctx for restarted tikvs.
 
 	instances := []struct {
 		comp string
