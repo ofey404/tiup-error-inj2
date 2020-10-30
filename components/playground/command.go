@@ -36,6 +36,7 @@ const (
 	ScaleOutCommandType  CommandType = "scale-out"
 	DisplayCommandType   CommandType = "display"
 	PartitionCommandType CommandType = "partition"
+	RestartCommandType   CommandType = "restart"
 )
 
 // Command send to Playground.
@@ -175,6 +176,25 @@ func newPartition() *cobra.Command {
 	return cmd
 }
 
+func newRestart() *cobra.Command {
+	var pids []int
+
+	cmd := &cobra.Command{
+		Use: "restart certain tikv instance with specified pid.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(pids) == 0 {
+				return cmd.Help()
+			}
+
+			return restart(pids)
+		},
+	}
+
+	cmd.Flags().IntSliceVar(&pids, "pid", nil, "pid of instance to make --advertise-addr unavailable")
+
+	return cmd
+}
+
 func scaleIn(pids []int) error {
 	port, err := targetTag()
 	if err != nil {
@@ -232,6 +252,25 @@ func partition(pids []int) error {
 	for _, pid := range pids {
 		c := Command{
 			CommandType: PartitionCommandType,
+			PID:         pid,
+		}
+		cmds = append(cmds, c)
+	}
+
+	addr := "127.0.0.1:" + strconv.Itoa(port)
+	return sendCommandsAndPrintResult(cmds, addr)
+}
+
+func restart(pids []int) error {
+	port, err := targetTag()
+	if err != nil {
+		return errors.AddStack(err)
+	}
+
+	var cmds []Command
+	for _, pid := range pids {
+		c := Command{
+			CommandType: RestartCommandType,
 			PID:         pid,
 		}
 		cmds = append(cmds, c)

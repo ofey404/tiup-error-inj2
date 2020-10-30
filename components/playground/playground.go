@@ -158,6 +158,11 @@ func (p *Playground) handlePartition(w io.Writer, pid int) (err error) {
 	return nil
 }
 
+func (p *Playground) handleRestart(w io.Writer, pid int) (err error) {
+	fmt.Printf("restart is called with pid %d!\n", pid)
+	return nil
+}
+
 var timeoutOpt = &utils.RetryOption{
 	Timeout: time.Second * 15,
 	Delay:   time.Second * 5,
@@ -508,6 +513,8 @@ func (p *Playground) handleCommand(cmd *Command, w io.Writer) error {
 		return p.handleScaleOut(w, cmd)
 	case PartitionCommandType:
 		return p.handlePartition(w, cmd.PID)
+	case RestartCommandType:
+		return p.handleRestart(w, cmd.PID)
 	}
 
 	return nil
